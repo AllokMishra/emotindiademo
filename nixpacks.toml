@@ -1,7 +1,6 @@
 [phases.setup]
 nixPkgs = [
   "python312",
-  "python312Packages.distutils",
   "gcc",
   "cmake",
   "libGL",
