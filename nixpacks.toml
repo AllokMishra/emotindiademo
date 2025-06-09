@@ -1,19 +1,11 @@
 [phases.setup]
-nixPkgs = [
-  "python311",
-  "python311Packages.setuptools",
-  "python311Packages.pip",
-  "python311Packages.distutils",
-  "gcc",
-  "cmake",
-  "libGL",
-  "glib"
-]
+nixPkgs = ["python312", "gcc", "cmake", "libGL", "glib"]
 
 [phases.install]
 cmds = [
-  "pip install --no-cache-dir -r requirements.txt"
+  "python -m venv venv",
+  "source venv/bin/activate && pip install --no-cache-dir -r requirements.txt"
 ]
 
 [start]
-cmd = "gunicorn app:app --bind 0.0.0.0:5000"
+cmd = "source venv/bin/activate && gunicorn app:app --bind 0.0.0.0:5000"
