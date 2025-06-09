@@ -1,48 +1,51 @@
-from flask import Flask, render_template, Response
-import cv2
+from flask import Flask, render_template, request, jsonify
 from deepface import DeepFace
+import numpy as np
+import cv2
+import base64
 
 app = Flask(__name__)
-camera = cv2.VideoCapture(0)
 
-def gen_frames():
-    while True:
-        success, frame = camera.read()
-        if not success:
-            break
-
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml') \
-                    .detectMultiScale(gray, 1.1, 5)
-
-        for (x, y, w, h) in faces:
-            face = frame[y:y+h, x:x+w]
-            result = DeepFace.analyze(face, actions=['emotion'], enforce_detection=False)
-            emotion = result[0]['dominant_emotion']
-            cv2.putText(frame, emotion, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
-
-        ret, buffer = cv2.imencode('.jpg', frame)
-        frame = buffer.tobytes()
-
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-
-
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template('index.html')  # HTML page with video element
+    return render_template("index.html")
+
+@app.route("/predict_emotion", methods=["POST"])
+def predict_emotion():
+    data = request.get_json()
+
+    # Extract base64 image string
+    img_data = data.get("image")
+    if not img_data:
+        return jsonify({"error": "No image data provided"}), 400
+
+    # Remove the base64 header if present
+    if "," in img_data:
+        img_data = img_data.split(",")[1]
+
+    # Decode base64 to bytes
+    img_bytes = base64.b64decode(img_data)
+
+    # Convert bytes to numpy array
+    np_arr = np.frombuffer(img_bytes, np.uint8)
+
+    # Decode image
+    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+    # DeepFace expects RGB
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    # Run emotion analysis (enforce_detection=False to prevent errors)
+    try:
+        result = DeepFace.analyze(img_rgb, actions=["emotion"], enforce_detection=False)
+        emotion = result[0]["dominant_emotion"]
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({"emotion": emotion})
 
 
-@app.route('/video')
-def video():
-    return Response(gen_frames(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
-
-if __name__ == '__main__':
-    app.run(debug=True)
-Flask==2.2.3
-opencv-python-headless==4.7.0.72
-deepface==0.0.75
-numpy==1.24.3
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
