@@ -1,5 +1,13 @@
 [phases.setup]
-nixPkgs = ["python312", "gcc", "cmake", "libGL", "glib"]
+nixPkgs = [
+  "python312",
+  "python312Full",
+  "python312Packages.distutils",  # Add this line
+  "gcc",
+  "cmake",
+  "libGL",
+  "glib"
+]
 
 [phases.install]
 cmds = [
