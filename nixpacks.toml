@@ -1,8 +1,19 @@
 [phases.setup]
-nixPkgs = ["python312", "gcc", "cmake", "python312Full", "libGL", "glib"]
+nixPkgs = [
+  "python311",
+  "python311Packages.setuptools",
+  "python311Packages.pip",
+  "python311Packages.distutils",
+  "gcc",
+  "cmake",
+  "libGL",
+  "glib"
+]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = [
+  "pip install --no-cache-dir -r requirements.txt"
+]
 
 [start]
 cmd = "gunicorn app:app --bind 0.0.0.0:5000"
