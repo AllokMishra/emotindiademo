@@ -1,30 +1,33 @@
-FROM python:3.10-slim
+# Base image with minimal footprint
+FROM python:3.12-slim
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake \
-    python3-distutils \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+# Metadata (optional)
+LABEL maintainer="your-email@example.com"
+LABEL description="EmotIndia - Real-time Emotion Detection using CNN"
 
-# Setup virtual environment
-ENV VIRTUAL_ENV=/opt/venv
-RUN python -m venv $VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+# Prevent interactive prompts during build
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
-
-# Copy application files
-COPY . /app
+# Set working directory
 WORKDIR /app
 
-# Expose the port
+# Copy only requirements first to leverage Docker cache
+COPY requirements.txt .
+
+# Install system-level dependencies & Python packages
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc libgl1-mesa-glx libglib2.0-0 && \
+    pip install --no-cache-dir -r requirements.txt && \
+    apt-get purge -y gcc && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy the rest of the app
+COPY . .
+
+# Expose the port used by Flask
 EXPOSE 5000
 
-# Start the app using gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+# Command to run the app
+CMD ["python", "app.py"]
