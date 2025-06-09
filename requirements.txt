@@ -1,0 +1,5 @@
+Flask==2.2.3
+opencv-python-headless==4.7.0.72
+deepface==0.0.75
+numpy==1.24.3
+tf_keras
